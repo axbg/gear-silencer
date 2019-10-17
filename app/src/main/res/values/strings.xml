@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">Gear Silencer</string>
+    <string name="btn_start_service">Start</string>
+    <string name="btn_stop_service">Stop</string>
 </resources>
