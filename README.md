@@ -1,2 +1,3 @@
 # gear-silencer
-A small Android service that sets the phone on silent when a smartwatch is connected
+#### A lightweight Android service that sets the phone on silent when a wearable is connected
+###### Working on Android Oreo and above
