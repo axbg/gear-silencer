@@ -80,4 +80,10 @@ class GearSilencerService : Service() {
     override fun onBind(intent: Intent?): IBinder? {
         return null
     }
+
+    override fun onDestroy() {
+        val am = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        am.ringerMode = AudioManager.RINGER_MODE_VIBRATE
+    }
+
 }

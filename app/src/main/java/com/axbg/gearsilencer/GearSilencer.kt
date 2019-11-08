@@ -51,4 +51,5 @@ class GearSilencer : AppCompatActivity() {
         val serviceIntent = Intent(this, GearSilencerService::class.java)
         stopService(serviceIntent)
     }
+
 }
