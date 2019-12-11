@@ -5,8 +5,11 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Button
+import android.widget.CompoundButton
+import android.widget.Switch
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import kotlinx.android.synthetic.main.activity_gear_silencer.*
 
 class GearSilencer : AppCompatActivity() {
 
@@ -16,6 +19,7 @@ class GearSilencer : AppCompatActivity() {
 
         val btnStartService = findViewById<Button>(R.id.btn_start)
         val btnStopService = findViewById<Button>(R.id.btn_stop)
+        val wifiSwitch = findViewById<Switch>(R.id.wifiSwitch)
 
         btnStartService.setOnClickListener {
             startService()
@@ -25,8 +29,18 @@ class GearSilencer : AppCompatActivity() {
             stopService()
         }
 
+        wifiSwitch.setOnCheckedChangeListener { _: CompoundButton, b: Boolean ->
+            if (b) {
+                writePreferences(true)
+            } else {
+                writePreferences(false)
+            }
+        }
+
+        loadPreferences()
         checkSilentPermission()
     }
+
 
     private fun checkSilentPermission() {
         val notificationManager = applicationContext.getSystemService(Context.NOTIFICATION_SERVICE)
@@ -42,8 +56,22 @@ class GearSilencer : AppCompatActivity() {
         startActivityForResult(intent, 0)
     }
 
+    private fun loadPreferences() {
+        val sharedPref = getPreferences(Context.MODE_PRIVATE) ?: return
+        wifiSwitch.isChecked = sharedPref.getBoolean(SWITCH_WIFI_PREFERENCE, false)
+    }
+
+    private fun writePreferences(switchWifi: Boolean) {
+        val sharedPref = getPreferences(Context.MODE_PRIVATE) ?: return
+        with(sharedPref.edit()) {
+            putBoolean(SWITCH_WIFI_PREFERENCE, switchWifi)
+            commit()
+        }
+    }
+
     private fun startService() {
         val serviceIntent = Intent(this, GearSilencerService::class.java)
+        serviceIntent.putExtra(SWITCH_WIFI_EXTRA, wifiSwitch.isChecked)
         ContextCompat.startForegroundService(this, serviceIntent)
     }
 

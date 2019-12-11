@@ -2,4 +2,5 @@
     <string name="app_name">Gear Silencer</string>
     <string name="btn_start_service">Start</string>
     <string name="btn_stop_service">Stop</string>
+    <string name="wifiBtn">Turn on Wi-Fi when Gear disconnected</string>
 </resources>

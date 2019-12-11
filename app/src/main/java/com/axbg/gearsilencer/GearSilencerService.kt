@@ -11,11 +11,17 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.media.AudioManager
+import android.net.wifi.WifiManager
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 
 class GearSilencerService : Service() {
+
+    private var am: AudioManager? = null
+    private var wm: WifiManager? = null
+    private var switchWifi = false
+    private var listener: BroadcastReceiver? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         createNotificationChannel()
@@ -30,9 +36,20 @@ class GearSilencerService : Service() {
             .setContentIntent(pendingIntent)
             .build()
 
+        retrieveIntentExtra(intent!!)
+        bindSystemControl()
         detectBluetooth()
         startForeground(SERVICE_ID, notification)
         return START_NOT_STICKY
+    }
+
+    private fun retrieveIntentExtra(intent: Intent) {
+        switchWifi = intent.getBooleanExtra(SWITCH_WIFI_EXTRA, false)
+    }
+
+    private fun bindSystemControl() {
+        am = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        wm = getSystemService(Context.WIFI_SERVICE) as WifiManager
     }
 
     private fun detectBluetooth() {
@@ -43,26 +60,36 @@ class GearSilencerService : Service() {
     }
 
     private fun createBluetoothListener(): BroadcastReceiver {
-        return object : BroadcastReceiver() {
+        listener = object : BroadcastReceiver() {
             override fun onReceive(context: Context?, intent: Intent?) {
                 val action = intent!!.action!!
-                val device = intent.getParcelableExtra<BluetoothDevice>(BluetoothDevice.EXTRA_DEVICE)!!
-                val am = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+                val device =
+                    intent.getParcelableExtra<BluetoothDevice>(BluetoothDevice.EXTRA_DEVICE)!!
 
                 when (action) {
                     BluetoothDevice.ACTION_ACL_CONNECTED -> {
                         if (device.bluetoothClass.majorDeviceClass == BluetoothClass.Device.Major.WEARABLE) {
-                            am.ringerMode = AudioManager.RINGER_MODE_SILENT
+                            am!!.ringerMode = AudioManager.RINGER_MODE_SILENT
+
+                            if (switchWifi) {
+                                wm!!.isWifiEnabled = false
+                            }
                         }
                     }
                     BluetoothDevice.ACTION_ACL_DISCONNECTED -> {
                         if (device.bluetoothClass.majorDeviceClass == BluetoothClass.Device.Major.WEARABLE) {
-                            am.ringerMode = AudioManager.RINGER_MODE_VIBRATE
+                            am!!.ringerMode = AudioManager.RINGER_MODE_VIBRATE
+
+                            if (switchWifi) {
+                                wm!!.isWifiEnabled = true
+                            }
                         }
                     }
                 }
             }
         }
+
+        return listener!!
     }
 
     private fun createNotificationChannel() {
@@ -82,8 +109,8 @@ class GearSilencerService : Service() {
     }
 
     override fun onDestroy() {
-        val am = getSystemService(Context.AUDIO_SERVICE) as AudioManager
-        am.ringerMode = AudioManager.RINGER_MODE_VIBRATE
+        am!!.ringerMode = AudioManager.RINGER_MODE_VIBRATE
+        this.unregisterReceiver(listener!!)
     }
 
 }
