@@ -13,14 +13,18 @@ import android.content.IntentFilter
 import android.media.AudioManager
 import android.net.wifi.WifiManager
 import android.os.Build
+import android.os.Handler
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 
 class GearSilencerService : Service() {
 
+    private val delay = 10000L
+
     private var am: AudioManager? = null
     private var wm: WifiManager? = null
     private var switchWifi = false
+    private var recentlyDelayed = false
     private var listener: BroadcastReceiver? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -63,21 +67,25 @@ class GearSilencerService : Service() {
         listener = object : BroadcastReceiver() {
             override fun onReceive(context: Context?, intent: Intent?) {
                 val action = intent!!.action!!
-                val device =
-                    intent.getParcelableExtra<BluetoothDevice>(BluetoothDevice.EXTRA_DEVICE)!!
+                val device = intent.getParcelableExtra<BluetoothDevice>(BluetoothDevice.EXTRA_DEVICE)!!
 
                 when (action) {
                     BluetoothDevice.ACTION_ACL_CONNECTED -> {
-                        if (device.bluetoothClass.majorDeviceClass == BluetoothClass.Device.Major.WEARABLE) {
+                        if (device.bluetoothClass.majorDeviceClass == BluetoothClass.Device.Major.WEARABLE
+                            && !recentlyDelayed) {
                             am!!.ringerMode = AudioManager.RINGER_MODE_SILENT
 
                             if (switchWifi) {
                                 wm!!.isWifiEnabled = false
                             }
+
+                            recentlyDelayed = true
+                            toggleOffRecentlyDelayed()
                         }
                     }
                     BluetoothDevice.ACTION_ACL_DISCONNECTED -> {
-                        if (device.bluetoothClass.majorDeviceClass == BluetoothClass.Device.Major.WEARABLE) {
+                        if (device.bluetoothClass.majorDeviceClass == BluetoothClass.Device.Major.WEARABLE
+                            && !recentlyDelayed) {
                             am!!.ringerMode = AudioManager.RINGER_MODE_VIBRATE
 
                             if (switchWifi) {
@@ -90,6 +98,14 @@ class GearSilencerService : Service() {
         }
 
         return listener!!
+    }
+
+    private fun toggleOffRecentlyDelayed() {
+        Handler().postDelayed({
+                recentlyDelayed = false
+            },
+            delay
+        )
     }
 
     private fun createNotificationChannel() {
